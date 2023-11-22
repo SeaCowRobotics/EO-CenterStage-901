@@ -1,11 +1,7 @@
 package org.firstinspires.ftc.teamcode;
 
 import android.util.Log;
-import org.openftc.easyopencv.OpenCvPipeline;
 
-//requires:
-import java.util.ArrayList;
-import java.util.List;
 import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
@@ -15,6 +11,10 @@ import org.opencv.core.Point;
 import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
+import org.openftc.easyopencv.OpenCvPipeline;
+
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -22,7 +22,7 @@ import org.opencv.imgproc.Imgproc;
  * This code searches for gold/yellow colors and displays a rectangle around
  * the largest contour of the gold/yellow filtering.
  */
-public class PipelineProp extends OpenCvPipeline {
+public class PipelinePropRed extends OpenCvPipeline {
     private final String TAG = this.getClass().getSimpleName();
     private Mat displayMat = new Mat(); // Image Mat to be displayed on screen
     public  Mat fileMat    = new Mat(); // Image Mat to hold image to write to a file
@@ -33,7 +33,7 @@ public class PipelineProp extends OpenCvPipeline {
     public Scalar leftColor;
     public Scalar centerColor;
 
-    public Mat doLinkCropImage_blue(Mat matImgSrc) {
+    public Mat doLinkCropImage_red(Mat matImgSrc) {
         int mark;
         Scalar blank = new Scalar(0,0,0);
         Mat matImgDst = Mat.zeros(matImgSrc.rows(), matImgSrc.cols(), CvType.CV_8U);
@@ -48,7 +48,7 @@ public class PipelineProp extends OpenCvPipeline {
             Mat rightMat = matImgDst.submat(new Rect(mark, 0, matImgSrc.cols()-mark-1, matImgSrc.rows()));
             rightMat.setTo(blank);
         }
-        mark = 133;
+        mark = 103;
         if (mark > 0) {
             Mat topMat = matImgDst.submat(new Rect(0, 0, matImgSrc.cols(), mark));
             topMat.setTo(blank);
@@ -60,10 +60,10 @@ public class PipelineProp extends OpenCvPipeline {
         }
         return matImgDst;
     }
-
-    public Mat doLinkInRangeHSV_blue(Mat matImgSrc) {
+    public Mat doLinkInRangeHHSV_red(Mat matImgSrc) {
         Mat src = new Mat();
         Mat msk = new Mat();
+        Mat msk2 = new Mat();
         // Initialize output Mat to all zeros; and to same Size as input Mat
         Mat matImgDst = Mat.zeros(
                 matImgSrc.rows(), // int - number of rows
@@ -76,16 +76,31 @@ public class PipelineProp extends OpenCvPipeline {
         Imgproc.cvtColor(
                 matImgSrc,             // Mat - source
                 src,                   // Mat - destination
-                Imgproc.COLOR_BGR2HSV  // int - code space conversion code
+                Imgproc.COLOR_RGB2HSV  // int - code space conversion code
         );
         // Create masking Mat msk of all pixels within Scalar boundaries
-        Scalar lowerb = new Scalar(87, 37, 50);
-        Scalar upperb = new Scalar(131, 255, 255);
+        Scalar lowerb1 = new Scalar (0, 34, 0);
+        Scalar upperb1 = new Scalar (12, 255, 255);
         Core.inRange(
                 src,       // Mat    - input Mat
-                lowerb,    // Scalar - inclusive lower boundary scalar
-                upperb,    // Scalar - inclusive upper boundary scalar
+                lowerb1,   // Scalar - inclusive lower boundary scalar
+                upperb1,   // Scalar - inclusive upper boundary scalar
                 msk        // Mat    - output Mat, same size as src, and of CV_8U type
+        );
+        // Create masking Mat msk of all pixels within Scalar boundaries
+        Scalar lowerb2 = new Scalar (173, 34, 0);
+        Scalar upperb2 = new Scalar (180, 255, 255);
+        Core.inRange(
+                src,       // Mat    - input Mat
+                lowerb2,   // Scalar - inclusive lower boundary scalar
+                upperb2,   // Scalar - inclusive upper boundary scalar
+                msk2       // Mat    - output Mat, same size as src, and of CV_8U type
+        );
+        // Merge two mask Mats with logical-OR operation
+        Core.bitwise_or(
+                msk,       // Mat - input Mat #1
+                msk2,      // Mat - input Mat #2
+                msk        // Mat - output Mat
         );
         // Copy matImgSrc pixels to matImgDst, filtered by msk
         Core.copyTo(
@@ -95,8 +110,7 @@ public class PipelineProp extends OpenCvPipeline {
         );
         return matImgDst;
     }
-
-    public List<MatOfPoint> doLinkFindContours_blue(Mat matImgSrc) {
+    public List<MatOfPoint> doLinkFindContours_red(Mat matImgSrc) {
         Mat gray = new Mat();
         Mat hierarchy = new Mat();
         List<MatOfPoint> contours = new ArrayList<>();
@@ -104,7 +118,7 @@ public class PipelineProp extends OpenCvPipeline {
         Imgproc.cvtColor(
                 matImgSrc,              // Mat - source
                 gray,                   // Mat - destination
-                Imgproc.COLOR_BGR2GRAY  // int - code space conversion code
+                Imgproc.COLOR_RGB2GRAY  // int - code space conversion code
         );
         Imgproc.findContours(
                 gray,         // Mat - input image
@@ -115,7 +129,7 @@ public class PipelineProp extends OpenCvPipeline {
         );
         return contours;
     }
-    public List<MatOfPoint> doLinkFilterContours_blue(List<MatOfPoint> contours) {
+    public List<MatOfPoint> doLinkFilterContours_red(List<MatOfPoint> contours) {
         List<MatOfPoint> filteredContours = new ArrayList<>();
         double area;
         double perimeter;
@@ -126,7 +140,7 @@ public class PipelineProp extends OpenCvPipeline {
             contour2f = new MatOfPoint2f(contours.get(i).toArray());
             perimeter = Imgproc.arcLength(contour2f,true);
             // only add contours within desired area and perimeter to list of filtered contours
-            if (( area > 100.0 ) &&
+            if (( area > 300.0 ) &&
                     (area < 10000.0) &&
                     ( perimeter > -1.0) &&
                     (perimeter < Double.POSITIVE_INFINITY)) {
@@ -135,14 +149,14 @@ public class PipelineProp extends OpenCvPipeline {
         }
         return filteredContours;
     }
-    public int doLinkCenterStageProp_blue(List<MatOfPoint> contours) {
+    public int doLinkCenterStageProp_red(List<MatOfPoint> contours) {
         int leftSpikeMin = 0;
-        int leftSpikeMax = 10;
-        int leftPropMin  = 100;
+        int leftSpikeMax = 700;
+        int leftPropMin  = 700;
         int leftPropMax  = 10000;
         int centerSpikeMin = 0;
-        int centerSpikeMax = 10;
-        int centerPropMin  = 100;
+        int centerSpikeMax = 700;
+        int centerPropMin  = 700;
         int centerPropMax  = 10000;
         List<Point>   circleCenters = new ArrayList<>();
         List<Double>  contourAreas = new ArrayList<>();
@@ -190,7 +204,7 @@ public class PipelineProp extends OpenCvPipeline {
         } else if (leftIsSpike && centerIsProp) {
             propIndex = 2;
         }
-
+        // not JULIP :)-----------------
         if (propIndex > 0) {
             leftPoint = new Point(circleCenters.get(leftIdx).x, circleCenters.get(leftIdx).y);
             centerPoint = new Point(circleCenters.get(centerIdx).x, circleCenters.get(centerIdx).y);
@@ -205,19 +219,19 @@ public class PipelineProp extends OpenCvPipeline {
         } else {
             centerColor = new Scalar(0.0, 255.0, 0.0);
         }
-
+        //----------------------------------
         return propIndex;
     }
-
-    public int doChain_blue(Mat matImgSrc) {
-        Mat cropImageMat = doLinkCropImage_blue(matImgSrc);
-        Mat inRangeHSVMat = doLinkInRangeHSV_blue(cropImageMat);
-        List<MatOfPoint> findContoursList = doLinkFindContours_blue(inRangeHSVMat);
-        List<MatOfPoint> filterContoursList = doLinkFilterContours_blue(findContoursList);
-        int centerStageProp = doLinkCenterStageProp_blue(filterContoursList);
-        return centerStageProp;
+//    public int doChain_red(Mat matImgSrc) {
+        public Mat doChain_red(Mat matImgSrc) {
+        Mat cropImageMat = doLinkCropImage_red(matImgSrc);
+        Mat inRangeHHSVMat = doLinkInRangeHHSV_red(cropImageMat);
+//        List<MatOfPoint> findContoursList = doLinkFindContours_red(inRangeHHSVMat);
+//        List<MatOfPoint> filterContoursList = doLinkFilterContours_red(findContoursList);
+//        int centerStageProp = doLinkCenterStageProp_red(filterContoursList);
+//        return centerStageProp;
+            return inRangeHHSVMat;
     }
-
 
 
     /**
@@ -229,11 +243,11 @@ public class PipelineProp extends OpenCvPipeline {
         
         Log.d(TAG, "processing frame");
 
-        foundPropHere = doChain_blue(input);
+//        foundPropHere = doChain_red(input);
+        displayMat  = doChain_red(input);
+//        Imgproc.cvtColor(input, fileMat, Imgproc.COLOR_BGR2RGB);;
 
-        Imgproc.cvtColor(input, fileMat, Imgproc.COLOR_BGR2RGB);;
-
-        input.copyTo(displayMat);
+//        input.copyTo(displayMat);
 
         return displayMat;
 
